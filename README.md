@@ -1,4 +1,4 @@
-*This page was written by AI
+*This page was written _mostly_ by AI
 # Software Architecture Patterns: Theory & Practice in Ruby*
 
 A study guide covering core software architecture patterns — from monolithic to distributed — with theory, ASCII diagrams, and hands-on exercises in Ruby. All exercises build the same domain (an online bookstore) so patterns can be compared directly.
@@ -30,4 +30,23 @@ A study guide covering core software architecture patterns — from monolithic t
 3. **Event-Driven Architecture** — broker and mediator topologies for async event processing
 4. **Space-Based Architecture** — in-memory data grids for extreme scalability
 5. **Service-Based Architecture** — coarse-grained domain services as a middle ground between monolith and microservices
-# architectural-patterns
+
+## Summary Comparison
+
+| Aspect                | Layered                | Modular Monolith                | Event-Driven           | Space-Based                | Service-Based                           |
+|-----------------------|------------------------|---------------------------------|------------------------|----------------------------|-----------------------------------------|
+| **Deployment**        | Single unit            | Single unit                     | Per processor          | Per unit                   | Per service                             |
+| **Communication**     | Method calls (down)    | Public APIs + events            | Async events           | In-memory replication      | HTTP/REST                               |
+| **Data**              | Single DB              | Partioned per module            | Per processor          | In-memory per unit         | Shared DB                               |
+| **Scalability**       | Low                    | Low-Medium                      | High                   | Very High                  | Medium                                  |
+| **Complexity**        | Low                    | Medium                          | High                   | Very High                  | Medium                                  |
+| **Fault Tolerance**   | Low                    | Low                             | High                   | High                       | Medium - High                           |
+| **Best Use Case**     | Small simple CRUD apps | Growing apps, pre-microservices | High-thoroughput async | Extreme concurrency spiked | Business apps needing deploy assistance |
+
+
+## Recommended Order of Implementation
+1. **Layered** — start here to establish the baseline
+2. **Modular Monolith** — refactor the layered version into modules to see the contrast
+3. **Service-Based** — extract modules into services to experience the monolith-to-distributed transition
+4. **Event-Driven** — rebuild with events to see the paradigm shift from request/response to event/reaction
+5. **Space-Based** — build last, as it's the most complex and benefits from understanding the others first
