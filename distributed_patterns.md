@@ -12,46 +12,62 @@ Event-driven architecture is built around the **production, detection, and react
 There are two main topologies:
 
 ### Broker Topology
-No central orchestrator. Events flow through a lightweight message broker. Each processor listens, reacts, and optionally emits new events.
+No central orchestrator. Events flow through a lightweight message broker. Each processor listens, reacts, and optionally emits new events — which feed back into the broker, creating a chain reaction.
 ```md
-                    ┌─────────────┐
-  Event ──────────► │   Broker    │
-                    │  (Channel)  │
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │Processor │ │Processor │ │Processor │
-        │    A     │ │    B     │ │    C     │
-        └────┬─────┘ └──────────┘ └────┬─────┘
-             │                         │
-             ▼                         ▼
-        New Event                 New Event
+                        ┌─────────────────┐
+  "OrderPlaced" ──────► │     Broker      │ ◄──────────────────┐
+                        │   (Channels)    │                    │
+                        └────────┬────────┘                    │
+                                 │                             │
+              ┌──────────────────┼──────────────────┐          │
+              ▼                  ▼                  ▼          │
+        ┌───────────┐    ┌────────────┐    ┌────────────┐      │
+        │  Payment  │    │ Inventory  │    │  Notif.    │      │
+        │ Processor │    │ Processor  │    │ Processor  │      │
+        └─────┬─────┘    └─────┬──────┘    └────────────┘      │
+              │                │                               │
+              ▼                ▼                               │
+       "PaymentCharged"  "StockUpdated" ───────────────────────┘
+        (new event)       (new event)
+         loops back        loops back
 ```
 
 - Good for simple flows, high throughput
 - Hard to track end-to-end flow, no central error handling
-- No single component "owns" the workflow
+- No single component "owns" the workflow — the chain emerges from processors reacting independently
+- Any processor can trigger further reactions by emitting new events
 
 ### Mediator Topology
-A central **mediator** (orchestrator) receives the initial event and coordinates the workflow by generating **processing events** and sending them to specific processors.
+A central **mediator** (orchestrator) receives the initial event and coordinates the workflow by generating **commands** and sending them to specific processors. Unlike the broker, the mediator knows and controls the full sequence.
 ```md
-                    ┌──────────────┐
-  Event ──────────► │  Mediator    │
-                    │(Orchestrator)│
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │Processor │ │Processor │ │Processor │
-        │    A     │ │    B     │ │    C     │
-        └──────────┘ └──────────┘ └──────────┘
+                        ┌──────────────────┐
+  "OrderPlaced" ──────► │     Mediator     │
+                        │  (Orchestrator)  │
+                        └────────┬─────────┘
+                                 │
+                    Sends commands in sequence:
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          │ Step 1               │ Step 2               │ Step 3
+          ▼                      ▼                      ▼
+  "ValidateOrder"        "ChargePayment"        "SendConfirmation"
+          │                      │                      │
+          ▼                      ▼                      ▼
+   ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+   │ Validation  │       │   Payment   │       │   Notif.    │
+   │  Processor  │       │  Processor  │       │  Processor  │
+   └──────┬──────┘       └──────┬──────┘       └──────┬──────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                        Reports back to
+                          Mediator
+                    (success, failure, or
+                     partial completion)
 ```
 - Good for complex flows that require coordination
-- The mediator knows the full workflow
-- Easier error handling and recovery
+- The mediator knows the full workflow and controls the order of steps
+- Easier error handling and recovery — if Step 2 fails, the mediator can retry or compensate
 - But the mediator can become a bottleneck/single point of failure
 
 #### Key concepts:
